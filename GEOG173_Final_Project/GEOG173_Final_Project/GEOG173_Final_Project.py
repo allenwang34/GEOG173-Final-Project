@@ -6,7 +6,7 @@ import arcpy
 import math
 import numpy
 
-###define workspace
+#define workspace
 ##workspace = arcpy.GetParameterAsText(0)
 ##
 ##arcpy.env.workspace = workspace
@@ -18,12 +18,6 @@ arcpy.env.overwriteOutput = True
 ##results = arcpy.GetParameterAsText(3) #This shape file only includes the result stations and their distances&travel time to the user.
 ###we will create map book from this result layer. 
 
-#######################################
-#           David's Code
-#   ################################
-#       Network Analyst Code
-#
-#######################################
 
 
 folder_path = r'D:\Final Project Data'
