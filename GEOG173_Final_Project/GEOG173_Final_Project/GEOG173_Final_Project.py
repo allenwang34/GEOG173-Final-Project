@@ -6,19 +6,30 @@ import arcpy
 import math
 import numpy
 
-#define workspace
-##workspace = arcpy.GetParameterAsText(0)
-##
-##arcpy.env.workspace = workspace
+define workspace
+workspace = arcpy.GetParameterAsText(0)
+arcpy.env.workspace = workspace
 arcpy.env.overwriteOutput = True
-##
+
 ###choose a shapefile to workwith 
-##inStations = arcpy.GetParameterAsText(1) #this can be a feature class
-##outStations = arcpy.GetParameterAsText(2) #this is a duplicated point layer, we will create user location on this layer
-##results = arcpy.GetParameterAsText(3) #This shape file only includes the result stations and their distances&travel time to the user.
-###we will create map book from this result layer. 
+inStations = arcpy.GetParameterAsText(1) #this can be a feature class
+outStations = arcpy.GetParameterAsText(2) #this is a duplicated point layer, we will create user location on this layer
+results = arcpy.GetParameterAsText(3) #This shape file only includes the result stations and their distances&travel time to the user.
+#we will create map book from this result layer. 
 
+#######################################
+#           David's Code
+#   ################################
+#       Network Analyst Code
+#
+#######################################
 
+#######################################
+#           David's Code
+#   ################################
+#       Network Analyst Code
+#
+#######################################
 
 folder_path = r'D:\Final Project Data'
 
@@ -104,6 +115,12 @@ del cursor
 
 print "STARTING THE NETWORK ANALYST"
 
+#######################################
+#           David's Code
+#   ################################
+#       Network Analyst Code
+#
+#######################################
 
 if arcpy.CheckExtension("NETWORK") == "Available":
     arcpy.CheckOutExtension("NETWORK")
