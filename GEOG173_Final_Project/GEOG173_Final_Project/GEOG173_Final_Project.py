@@ -53,10 +53,10 @@ for row in infoInserter:
 del points,point,infoInserter,row
 
 
-
-
-
 #The second step is to use network analysis to select the stations based on user input
+from arcpy.na import*
+arcpy.CheckOutExtension("Network")
+#arcpy.na.FindClosestFacilities() TODO: Need to figure out what to put here
 
 
 
