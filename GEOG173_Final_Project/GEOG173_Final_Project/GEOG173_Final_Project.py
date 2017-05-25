@@ -6,34 +6,20 @@ import arcpy
 import math
 import numpy
 
-define workspace
-workspace = arcpy.GetParameterAsText(0)
-arcpy.env.workspace = workspace
+#define workspace
+folder_path = arcpy.GetParameterAsText(0)
+arcpy.env.workspace = folder_path
 arcpy.env.overwriteOutput = True
 
 ###choose a shapefile to workwith 
-inStations = arcpy.GetParameterAsText(1) #this can be a feature class
-outStations = arcpy.GetParameterAsText(2) #this is a duplicated point layer, we will create user location on this layer
-results = arcpy.GetParameterAsText(3) #This shape file only includes the result stations and their distances&travel time to the user.
+charging_stations = arcpy.GetParameterAsText(1) #this can be a feature class
+#charging_stations_copy = arcpy.GetParameterAsText(2) #this is a duplicated point layer, we will create user location on this layer
+#results = arcpy.GetParameterAsText(3) #This shape file only includes the result stations and their distances&travel time to the user.
 #we will create map book from this result layer. 
 
-#######################################
-#           David's Code
-#   ################################
-#       Network Analyst Code
-#
-#######################################
+#folder_path = r'D:\Final Project Data'
 
-#######################################
-#           David's Code
-#   ################################
-#       Network Analyst Code
-#
-#######################################
-
-folder_path = r'D:\Final Project Data'
-
-charging_stations = folder_path + r'\Charging_Stations.shp'
+#charging_stations = folder_path + r'\Charging_Stations.shp'
 charging_stations_copy = folder_path + r'\Charging_Stations_Copy.shp'
 single_point = folder_path + r'\Single_Point.shp'
 
@@ -46,16 +32,21 @@ arcpy.CopyFeatures_management(charging_stations, charging_stations_copy)
 #xy = arcpy.GetParameterAsText(4)
 
 #place_holder xy
-xy = "34.073990,-118.439298"
-#split the string
-split_text = xy.split(",")
-#the second index is north (x)
-x = split_text[1]
-#the first index is west (y)
-y = split_text[0]
+#xy = "34.073990,-118.439298"
+userCoord = arcpy.GetParameterAsText(2) #get the user location 
 
+##split the string
+#split_text = xy.split(",")
+
+Coords = userCoord.split(" ")
+##the second index is north (x)
+#x = split_text[1]
+xCoord = float(Coords[0])
+##the first index is west (y)
+#y = split_text[0]
+yCoord = float(Coords[1])
 #make xy a float
-xy = (float(x),float(y))
+xy = (xCoord,yCoord)
 
 ###########################################
 #   Adds point to charging stations copy
@@ -103,10 +94,17 @@ with arcpy.da.UpdateCursor(charging_stations_copy,"FID") as cursor:
             cursor.deleteRow()
 del cursor
 
-with arcpy.da.UpdateCursor(charging_stations_copy,"Fuel_Type") as cursor:
+fuelType = arcpy.GetParameterAsText(3)
+OriginalStationOIDList = []
+
+with arcpy.da.UpdateCursor(charging_stations_copy,["Fuel_Type","FID"]) as cursor:
     for row in cursor:
-        if row[0] != "HY":#"BD","CNG","E85","HY","LNG","LPG"
+        if row[0] != fuelType:#"BD","CNG","E85","HY","LNG","LPG"
             cursor.deleteRow()
+        else:
+            OriginalStationOID = row[1]
+            OriginalStationOIDList.append(OriginalStationOID)
+
 del cursor
 
 ###########################################
@@ -124,6 +122,8 @@ print "STARTING THE NETWORK ANALYST"
 
 if arcpy.CheckExtension("NETWORK") == "Available":
     arcpy.CheckOutExtension("NETWORK")
+else:
+    quit()
    
 
 inIncidents  = folder_path + r'\Single_Point.shp'
@@ -144,10 +144,7 @@ incidentsLayerName = subLayerNames["Incidents"]
 arcpy.na.AddLocations(out_CL,facilitiesLayerName,inFacilities,"","")
 arcpy.na.AddLocations(out_CL,incidentsLayerName,inIncidents,"","")
 
-
 out_layer = folder_path + r'\OUTPUT_LAYER.lyr'
-
-
 
 print "SOLVING"
 
@@ -163,14 +160,13 @@ routesLayer = out_layer + r'Closest Facility\Routes'
 routesShape = folder_path + r'\Routes.shp'
 
 layerFile = arcpy.mapping.Layer(out_layer)
-
 layers = arcpy.mapping.ListLayers(layerFile)
+
 for layer in layers:
     if layer.name == "Routes":
         arcpy.CopyFeatures_management(layer, routesShape)
 
-
-
+quit()
 
 
 ##
