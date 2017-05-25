@@ -22,17 +22,3 @@ results = arcpy.GetParameterAsText(3) #This shape file only includes the result 
 #The first step to do is let the user enter his or her location, X is longitude and Y is latitude. 
 #Bascially we create a point geometry on the map. 
 arcpy.CopyFeatures_management(inStations, outStations)
-
-
-
-#The second step is to use network analysis to select the stations based on user input
-
-
-
-
-#The third step is to create a new shapefile which only includes the selected charing stations. We add new fields to this new shapefile, distance and travel time. 
-
-
-
-
-#The fourth step is to create a PDF map book based on the new shapefile we just created.
