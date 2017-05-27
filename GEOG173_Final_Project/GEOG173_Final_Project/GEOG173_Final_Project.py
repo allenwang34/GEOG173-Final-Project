@@ -22,16 +22,13 @@ charging_stations = arcpy.GetParameterAsText(1) #this can be a feature class
 #charging_stations = folder_path + r'\Charging_Stations.shp'
 charging_stations_copy = folder_path + r'\Charging_Stations_Copy.shp'
 single_point = folder_path + r'\Single_Point.shp'
+result_stations = folder_path + r'\Reulst_Stations.shp'
 
 arcpy.CopyFeatures_management(charging_stations, charging_stations_copy)
-###########################################
-#   GETS THE XY INFO
-###########################################
+arcpy.CopyFeatures_management(charging_stations, result_stations)
 
 # ASK FOR X,Y I WILL PUT IN A PLACEHOLDER, just uncomment and delete placeholder
-#xy = arcpy.GetParameterAsText(4)
 
-#place_holder xy
 #xy = "34.073990,-118.439298"
 userCoord = arcpy.GetParameterAsText(2) #get the user location 
 
@@ -48,19 +45,14 @@ yCoord = float(Coords[1])
 #make xy a float
 xy = (xCoord,yCoord)
 
-###########################################
-#   Adds point to charging stations copy
-###########################################
+
 
 pointCursor = arcpy.da.InsertCursor(charging_stations_copy,["SHAPE@XY"])
 pointCursor.insertRow([xy])
 
 del pointCursor
 
-###########################################
-#   create single point shapefile
-#   remove all extra points from shapefile
-###########################################
+
 
 #create single point shapefile
 arcpy.CopyFeatures_management(charging_stations_copy, single_point)
@@ -70,14 +62,14 @@ with arcpy.da.UpdateCursor(single_point,"Latitude") as cursor:
     for row in cursor:
         if row[0] != 0:
             cursor.deleteRow()
-del cursor
+del cursor, row
 
 #remove the single point from the charging stations copy
 with arcpy.da.UpdateCursor(charging_stations_copy,"Latitude") as cursor:
     for row in cursor:
         if row[0] == 0:
             cursor.deleteRow()
-del cursor
+del cursor, row
 
 #removes unlocated points from charging stations copy
 with arcpy.da.UpdateCursor(charging_stations_copy,"FID") as cursor:
@@ -92,10 +84,10 @@ with arcpy.da.UpdateCursor(charging_stations_copy,"FID") as cursor:
             cursor.deleteRow()
         elif row[0] == 23003:
             cursor.deleteRow()
-del cursor
+del cursor, row
 
 fuelType = arcpy.GetParameterAsText(3)
-OriginalStationOIDList = []
+originalStationFIDList = []
 
 with arcpy.da.UpdateCursor(charging_stations_copy,["Fuel_Type","FID"]) as cursor:
     for row in cursor:
@@ -103,22 +95,14 @@ with arcpy.da.UpdateCursor(charging_stations_copy,["Fuel_Type","FID"]) as cursor
             cursor.deleteRow()
         else:
             OriginalStationOID = row[1]
-            OriginalStationOIDList.append(OriginalStationOID)
+            originalStationFIDList.append(OriginalStationOID)
 
-del cursor
+del cursor, row
 
-###########################################
-#   NETWORK ANALYST - TAKES APPROX 15 MIN
-###########################################
+
 
 print "STARTING THE NETWORK ANALYST"
 
-#######################################
-#           David's Code
-#   ################################
-#       Network Analyst Code
-#
-#######################################
 
 if arcpy.CheckExtension("NETWORK") == "Available":
     arcpy.CheckOutExtension("NETWORK")
@@ -166,43 +150,48 @@ for layer in layers:
     if layer.name == "Routes":
         arcpy.CopyFeatures_management(layer, routesShape)
 
-quit()
-
-
-##
-##naClasses = arcpy.na.GetNAClassNames(out_CL)
-##routes = arcpy.mapping.ListLayers(out_layer,naClasses["Routes"])[0]
-##arcpy.management.CopyFeatures(routes,routesShape)
-
-#copy output
-arcpy.CopyFeatures_management(routesLayer, routesShape);
-
-#arcpy.CopyFeatures_management(folder_path + r'\Closest Facility\Routes', routes);
-
-# Replace a layer/table view name with a path to a dataset (which can be a layer file) or create the layer/table view within the script
-# The following inputs are layers or table views: "Closest Facility\Routes"
-arcpy.CopyFeatures_management(in_features="Closest Facility/Routes",out_feature_class="D:/Final Project Data/CopyRoutes.shp",config_keyword="#",spatial_grid_1="0",spatial_grid_2="0",spatial_grid_3="0")
 
 print "FINISHED THE NETWORK ANALYST"
 
-############################################
+#Create a shapefile of selected stations from route shapefile
+
+stationIndexList = [] 
+stations = arcpy.SearchCursor(routesShape)
+
+for station in stations:
+    stationIndex = station.getValue("FacilityID")
+    stationIndexList.append(stationIndex)
+
+del stations, station
+
+stationIndexList.sort()
+
+targetStationIndexList = [] 
+indexCounter = 0 
+outerCounter = 0
+for originalIndex in originalStationFIDList:
+    if stationIndexList[indexCounter] == outerCounter:
+        targetStationIndexList.append(originalIndex)
+        if indexCounter < 2:
+            indexCounter += 1
+        else:
+            break 
+    outerCounter += 1
 
 
-
-#The first step to do is let the user enter his or her location, X is longitude and Y is latitude. 
-#Bascially we create a point geometry on the map. 
+targetStationIndexList.sort()
 
 
+counter = 0 
+with arcpy.da.UpdateCursor(result_stations,"FID") as cursor:
+    for row in cursor:
+        if row[0] != stationIndexList[counter]:
+            cursor.deleteRow()
+        else:
+            if counter < 2:
+                counter += 1
+            else:
+                break
+del cursor, row
 
 
-#The second step is to use network analysis to select the stations based on user input
-
-
-
-
-#The third step is to create a new shapefile which only includes the selected charing stations. We add new fields to this new shapefile, distance and travel time. 
-
-
-
-
-#The fourth step is to create a PDF map book based on the new shapefile we just created.
