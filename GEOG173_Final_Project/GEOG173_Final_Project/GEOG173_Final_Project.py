@@ -72,19 +72,19 @@ with arcpy.da.UpdateCursor(charging_stations_copy,"Latitude") as cursor:
 del cursor, row
 
 #removes unlocated points from charging stations copy
-with arcpy.da.UpdateCursor(charging_stations_copy,"FID") as cursor:
-    for row in cursor:
-        if row[0] == 6752:
-            cursor.deleteRow()
-        elif row[0] == 18104:
-            cursor.deleteRow()
-        elif row[0] == 23001:
-            cursor.deleteRow()
-        elif row[0] == 23002:
-            cursor.deleteRow()
-        elif row[0] == 23003:
-            cursor.deleteRow()
-del cursor, row
+#with arcpy.da.UpdateCursor(charging_stations_copy,"FID") as cursor:
+    #for row in cursor:
+        #if row[0] == 6752:
+            #cursor.deleteRow()
+        #elif row[0] == 18104:
+            #cursor.deleteRow()
+        #elif row[0] == 23001:
+            #cursor.deleteRow()
+        #elif row[0] == 23002:
+            #cursor.deleteRow()
+        #elif row[0] == 23003:
+            #cursor.deleteRow()
+#del cursor, row
 
 fuelType = arcpy.GetParameterAsText(3)
 originalStationFIDList = []
@@ -166,11 +166,13 @@ del stations, station
 
 stationIndexList.sort()
 
+   
 targetStationIndexList = [] 
 indexCounter = 0 
 outerCounter = 0
 for originalIndex in originalStationFIDList:
-    if stationIndexList[indexCounter] == outerCounter:
+    realIndex = stationIndexList[indexCounter] -1
+    if realIndex == outerCounter: 
         targetStationIndexList.append(originalIndex)
         if indexCounter < 2:
             indexCounter += 1
@@ -181,17 +183,16 @@ for originalIndex in originalStationFIDList:
 
 targetStationIndexList.sort()
 
-
 counter = 0 
 with arcpy.da.UpdateCursor(result_stations,"FID") as cursor:
     for row in cursor:
-        if row[0] != stationIndexList[counter]:
+        if row[0] != targetStationIndexList[counter]: 
             cursor.deleteRow()
         else:
             if counter < 2:
                 counter += 1
             else:
-                break
+                counter = 2
 del cursor, row
 
 
