@@ -5,6 +5,8 @@
 import arcpy
 import math
 import numpy
+import os
+
 
 #define workspace
 folder_path = arcpy.GetParameterAsText(0)
@@ -20,9 +22,9 @@ charging_stations = arcpy.GetParameterAsText(1) #this can be a feature class
 #folder_path = r'D:\Final Project Data'
 
 #charging_stations = folder_path + r'\Charging_Stations.shp'
-charging_stations_copy = folder_path + r'\Charging_Stations_Copy.shp'
-single_point = folder_path + r'\Single_Point.shp'
-result_stations = folder_path + r'\Reulst_Stations.shp'
+charging_stations_copy = folder_path + r'\Results\Charging_Stations_Copy.shp'
+single_point = folder_path + r'\Results\Single_Point.shp'
+result_stations = folder_path + r'\Results\Reulst_Stations.shp'
 
 arcpy.CopyFeatures_management(charging_stations, charging_stations_copy)
 arcpy.CopyFeatures_management(charging_stations, result_stations)
@@ -45,8 +47,6 @@ yCoord = float(Coords[1])
 #make xy a float
 xy = (xCoord,yCoord)
 
-
-
 pointCursor = arcpy.da.InsertCursor(charging_stations_copy,["SHAPE@XY"])
 pointCursor.insertRow([xy])
 
@@ -58,9 +58,9 @@ del pointCursor
 arcpy.CopyFeatures_management(charging_stations_copy, single_point)
 
 #remove extra rows from single_point shapefile
-with arcpy.da.UpdateCursor(single_point,"Latitude") as cursor:
+with arcpy.da.UpdateCursor(single_point,"Station_Na") as cursor:
     for row in cursor:
-        if row[0] != 0:
+        if row[0] != " ":
             cursor.deleteRow()
 del cursor, row
 
@@ -110,8 +110,8 @@ else:
     quit()
    
 
-inIncidents  = folder_path + r'\Single_Point.shp'
-inFacilities = folder_path + r'\Charging_Stations_Copy.shp'
+inIncidents  = folder_path + r'\Results\Single_Point.shp'
+inFacilities = folder_path + r'\Results\Charging_Stations_Copy.shp'
 
 closest_layer = arcpy.MakeClosestFacilityLayer_na(in_network_dataset=folder_path + r'\Geog170_Street_Dataset\streets',
                                   out_network_analysis_layer="Closest Facility", impedance_attribute="Time", travel_from_to="TRAVEL_TO", default_cutoff="",
@@ -128,7 +128,7 @@ incidentsLayerName = subLayerNames["Incidents"]
 arcpy.na.AddLocations(out_CL,facilitiesLayerName,inFacilities,"","")
 arcpy.na.AddLocations(out_CL,incidentsLayerName,inIncidents,"","")
 
-out_layer = folder_path + r'\OUTPUT_LAYER.lyr'
+out_layer = folder_path + r'\Results\OUTPUT_LAYER.lyr'
 
 print "SOLVING"
 
@@ -140,8 +140,8 @@ print "SAVING"
 out_CL.saveACopy(out_layer)
 
 print "NEW SECTION"
-routesLayer = out_layer + r'Closest Facility\Routes'
-routesShape = folder_path + r'\Routes.shp'
+routesLayer = out_layer + r'\Closest Facility\Routes'
+routesShape = folder_path + r'\Results\Routes.shp'
 
 layerFile = arcpy.mapping.Layer(out_layer)
 layers = arcpy.mapping.ListLayers(layerFile)
@@ -150,9 +150,9 @@ for layer in layers:
     if layer.name == "Routes":
         arcpy.CopyFeatures_management(layer, routesShape)
 
-
 print "FINISHED THE NETWORK ANALYST"
 
+arcpy.CheckInExtension("NETWORK")
 #Create a shapefile of selected stations from route shapefile
 
 stationIndexList = [] 
@@ -165,8 +165,7 @@ for station in stations:
 del stations, station
 
 stationIndexList.sort()
-
-   
+ 
 targetStationIndexList = [] 
 indexCounter = 0 
 outerCounter = 0
@@ -179,7 +178,6 @@ for originalIndex in originalStationFIDList:
         else:
             break 
     outerCounter += 1
-
 
 targetStationIndexList.sort()
 
@@ -194,5 +192,32 @@ with arcpy.da.UpdateCursor(result_stations,"FID") as cursor:
             else:
                 counter = 2
 del cursor, row
+
+#Automatic add everything to the map
+mxdFileLocation = r'E:\Final Project\FinalProject.mxd'
+mxd = arcpy.mapping.MapDocument("CURRENT")
+df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
+
+pointList = [routesShape,single_point,result_stations]
+
+for point in pointList:
+    newLayer = arcpy.mapping.Layer(point)
+    arcpy.mapping.AddLayer(df,newLayer,"TOP")
+
+mxd.save()
+
+PDFName = folder_path + r'/Nearest Alternative Fuel Charging Stations.pdf'
+
+myPDF = arcpy.mapping.PDFDocumentCreate(PDFName)
+stationLyr = arcpy.mapping.ListLayers(mxd)[0]
+
+arcpy.SelectLayerByAttribute_management(stationLyr, "NEW_SELECTION")
+df.extent = stationLyr.getSelectedExtent()
+df.scale *= 1.2
+arcpy.RefreshActiveView()
+arcpy.SelectLayerByAttribute_management(stationLyr,"CLEAR_SELECTION")
+arcpy.mapping.ExportToPDF(mxd,PDFName, "PAGE_LAYOUT")
+
+
 
 
