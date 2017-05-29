@@ -206,10 +206,16 @@ for point in pointList:
 
 mxd.save()
 
+
 PDFName = folder_path + r'/Nearest Alternative Fuel Charging Stations.pdf'
 
 myPDF = arcpy.mapping.PDFDocumentCreate(PDFName)
 stationLyr = arcpy.mapping.ListLayers(mxd)[0]
+
+rows = arcpy.SearchCursor(routesShape)
+for row in rows:
+    stationNa = row.getValue()
+
 
 arcpy.SelectLayerByAttribute_management(stationLyr, "NEW_SELECTION")
 df.extent = stationLyr.getSelectedExtent()
