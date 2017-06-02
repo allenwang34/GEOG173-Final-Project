@@ -1,229 +1,91 @@
-#Geog173 Group Project
-#This script can help the user find three closest charing stations based on his or her current location.
-#The result will be printed as a map book. On each map, we will include couple information about that charging station 
+import arcpy                                                       
+import os                                                               
+from arcpy import env                                                 
+import textwrap
 
-import arcpy
-import math
-import numpy
-import os
-
-
-#define workspace
-folder_path = arcpy.GetParameterAsText(0)
+# Define workspace as your folderpath
+folder_path = r"E:\Geog173-Prog"
 arcpy.env.workspace = folder_path
-arcpy.env.overwriteOutput = True
+arcpy.env.overwriteOutput = True                        
 
-###choose a shapefile to workwith 
-charging_stations = arcpy.GetParameterAsText(1) #this can be a feature class
-#charging_stations_copy = arcpy.GetParameterAsText(2) #this is a duplicated point layer, we will create user location on this layer
-#results = arcpy.GetParameterAsText(3) #This shape file only includes the result stations and their distances&travel time to the user.
-#we will create map book from this result layer. 
+# arcpy.mapping
+mxd = arcpy.mapping.MapDocument(folder_path+"\Test1.mxd")  
+df = arcpy.mapping.ListDataFrames(mxd)[0]
+lyr_list = arcpy.mapping.ListLayers(mxd)
+finalPDF_fname = folder_path +"/Mapbook.pdf"
 
-#folder_path = r'D:\Final Project Data'
+if os.path.exists(finalPDF_fname):                                    
+    os.remove(finalPDF_fname)  
 
-#charging_stations = folder_path + r'\Charging_Stations.shp'
-charging_stations_copy = folder_path + r'\Results\Charging_Stations_Copy.shp'
-single_point = folder_path + r'\Results\Single_Point.shp'
-result_stations = folder_path + r'\Results\Reulst_Stations.shp'
+for lyr in lyr_list:                                                   
+    lyr.visible = True                                                  
+    lyr.showLabels = False                                 
 
-arcpy.CopyFeatures_management(charging_stations, charging_stations_copy)
-arcpy.CopyFeatures_management(charging_stations, result_stations)
+finalPDF = arcpy.mapping.PDFDocumentCreate(finalPDF_fname)   
+tmpPDF = folder_path+"/tmp.pdf"                      
 
-# ASK FOR X,Y I WILL PUT IN A PLACEHOLDER, just uncomment and delete placeholder
+lyrlist = arcpy.mapping.ListLayers(mxd, "", df)[0]
+stations = lyr_list[0]
 
-#xy = "34.073990,-118.439298"
-userCoord = arcpy.GetParameterAsText(2) #get the user location 
+#Text for title page
+mapText = "Fuel Stations"+"\n\r" +"Number of Stations: "
 
-##split the string
-#split_text = xy.split(",")
+elemlist = arcpy.mapping.ListLayoutElements(mxd)
+title = elemlist[1]
+title.text = mapText
+arcpy.mapping.ExportToPDF(mxd, tmpPDF) 
 
-Coords = userCoord.split(" ")
-##the second index is north (x)
-#x = split_text[1]
-xCoord = float(Coords[0])
-##the first index is west (y)
-#y = split_text[0]
-yCoord = float(Coords[1])
-#make xy a float
-xy = (xCoord,yCoord)
+# Get dataframe
+df = arcpy.mapping.ListDataFrames(mxd)[0]
+##df.extent = lyrExtent 
 
-pointCursor = arcpy.da.InsertCursor(charging_stations_copy,["SHAPE@XY"])
-pointCursor.insertRow([xy])
+# Append multi-page PDF to finalMapPDF
+finalPDF.appendPages(tmpPDF)
 
-del pointCursor
+l=1
+for lyr1 in lyr_list:
+    print lyr1, "\t",l
+    if l < 4:
+        lyr1.visible = True
+        lyr1.showLabels = True
+    else:
+        lyr1.visible = False
+        lyr1.showLabels = False
+    l = l+1
 
+z=1  
+# Get station cursor
+for row in arcpy.da.SearchCursor(stations, ["SHAPE@", "FID","Station_Na","Street_Add","City","State","ZIP","Access_Day"]):
+    
+##    df.scale = df.scale * 1.1
+    extent = row[0].extent
+    df.extent = extent
+    df.scale = 2000 #
+    df.scale *= .4
+    arcpy.RefreshActiveView()
 
+    mapText = "Station #: "+ str(z) \
+              +"\n" +textwrap.fill(row[2]) \
+              + "\n" + row[3] +" " +row[4] +", "+ row[5] +" "+str(row[6]) \
+              + "\nHours: " +  textwrap.fill(row[7])
+    elemlist = arcpy.mapping.ListLayoutElements(mxd)
+    title = elemlist[1]
+    title.text = mapText
 
-#create single point shapefile
-arcpy.CopyFeatures_management(charging_stations_copy, single_point)
+##    arcpy.mapping.ExportReport(stations,
+##                           r"C:\Users\Frank\Google Drive\UCLA\Geog173_PythonForGIS\Final/Station_report.rlf",
+##                          r"C:\Users\Frank\Google Drive\UCLA\Geog173_PythonForGIS\Final/tmp.pdf",
+##                           "EXTENT",
+##                           extent=df.extent)
 
-#remove extra rows from single_point shapefile
-with arcpy.da.UpdateCursor(single_point,"Station_Na") as cursor:
-    for row in cursor:
-        if row[0] != " ":
-            cursor.deleteRow()
-del cursor, row
+    arcpy.mapping.ExportToPDF(mxd, tmpPDF)
+    z=z+1
 
-#remove the single point from the charging stations copy
-with arcpy.da.UpdateCursor(charging_stations_copy,"Latitude") as cursor:
-    for row in cursor:
-        if row[0] == 0:
-            cursor.deleteRow()
-del cursor, row
+# Append multi-page PDF to finalMapPDF
+    finalPDF.appendPages(tmpPDF)
 
-#removes unlocated points from charging stations copy
-#with arcpy.da.UpdateCursor(charging_stations_copy,"FID") as cursor:
-    #for row in cursor:
-        #if row[0] == 6752:
-            #cursor.deleteRow()
-        #elif row[0] == 18104:
-            #cursor.deleteRow()
-        #elif row[0] == 23001:
-            #cursor.deleteRow()
-        #elif row[0] == 23002:
-            #cursor.deleteRow()
-        #elif row[0] == 23003:
-            #cursor.deleteRow()
-#del cursor, row
+finalPDF.saveAndClose()
 
-fuelType = arcpy.GetParameterAsText(3)
-originalStationFIDList = []
-
-with arcpy.da.UpdateCursor(charging_stations_copy,["Fuel_Type","FID"]) as cursor:
-    for row in cursor:
-        if row[0] != fuelType:#"BD","CNG","E85","HY","LNG","LPG"
-            cursor.deleteRow()
-        else:
-            OriginalStationOID = row[1]
-            originalStationFIDList.append(OriginalStationOID)
-
-del cursor, row
-
-
-
-print "STARTING THE NETWORK ANALYST"
-
-
-if arcpy.CheckExtension("NETWORK") == "Available":
-    arcpy.CheckOutExtension("NETWORK")
-else:
-    quit()
-   
-
-inIncidents  = folder_path + r'\Results\Single_Point.shp'
-inFacilities = folder_path + r'\Results\Charging_Stations_Copy.shp'
-
-closest_layer = arcpy.MakeClosestFacilityLayer_na(in_network_dataset=folder_path + r'\Geog170_Street_Dataset\streets',
-                                  out_network_analysis_layer="Closest Facility", impedance_attribute="Time", travel_from_to="TRAVEL_TO", default_cutoff="",
-                                  default_number_facilities_to_find="3", accumulate_attribute_name="", UTurn_policy="ALLOW_UTURNS",
-                                  restriction_attribute_name="TurnRestriction;OneWay", hierarchy="USE_HIERARCHY", hierarchy_settings="",
-                                  output_path_shape="TRUE_LINES_WITH_MEASURES", time_of_day="", time_of_day_usage="NOT_USED")
-
-out_CL = closest_layer.getOutput(0)
-
-subLayerNames = arcpy.na.GetNAClassNames(out_CL)
-facilitiesLayerName = subLayerNames["Facilities"]
-incidentsLayerName = subLayerNames["Incidents"]
-
-arcpy.na.AddLocations(out_CL,facilitiesLayerName,inFacilities,"","")
-arcpy.na.AddLocations(out_CL,incidentsLayerName,inIncidents,"","")
-
-out_layer = folder_path + r'\Results\OUTPUT_LAYER.lyr'
-
-print "SOLVING"
-
-arcpy.na.Solve(out_CL,"SKIP")
-
-print "FINISHED SOLVING"
-
-print "SAVING"
-out_CL.saveACopy(out_layer)
-
-print "NEW SECTION"
-routesLayer = out_layer + r'\Closest Facility\Routes'
-routesShape = folder_path + r'\Results\Routes.shp'
-
-layerFile = arcpy.mapping.Layer(out_layer)
-layers = arcpy.mapping.ListLayers(layerFile)
-
-for layer in layers:
-    if layer.name == "Routes":
-        arcpy.CopyFeatures_management(layer, routesShape)
-
-print "FINISHED THE NETWORK ANALYST"
-
-arcpy.CheckInExtension("NETWORK")
-#Create a shapefile of selected stations from route shapefile
-
-stationIndexList = [] 
-stations = arcpy.SearchCursor(routesShape)
-
-for station in stations:
-    stationIndex = station.getValue("FacilityID")
-    stationIndexList.append(stationIndex)
-
-del stations, station
-
-stationIndexList.sort()
- 
-targetStationIndexList = [] 
-indexCounter = 0 
-outerCounter = 0
-for originalIndex in originalStationFIDList:
-    realIndex = stationIndexList[indexCounter] -1
-    if realIndex == outerCounter: 
-        targetStationIndexList.append(originalIndex)
-        if indexCounter < 2:
-            indexCounter += 1
-        else:
-            break 
-    outerCounter += 1
-
-targetStationIndexList.sort()
-
-counter = 0 
-with arcpy.da.UpdateCursor(result_stations,"FID") as cursor:
-    for row in cursor:
-        if row[0] != targetStationIndexList[counter]: 
-            cursor.deleteRow()
-        else:
-            if counter < 2:
-                counter += 1
-            else:
-                counter = 2
-del cursor, row
-
-#Automatic add everything to the map
-mxdFileLocation = r'E:\Final Project\FinalProject.mxd'
-mxd = arcpy.mapping.MapDocument("CURRENT")
-df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
-
-pointList = [routesShape,single_point,result_stations]
-
-for point in pointList:
-    newLayer = arcpy.mapping.Layer(point)
-    arcpy.mapping.AddLayer(df,newLayer,"TOP")
-
-mxd.save()
-
-
-PDFName = folder_path + r'/Nearest Alternative Fuel Charging Stations.pdf'
-
-myPDF = arcpy.mapping.PDFDocumentCreate(PDFName)
-stationLyr = arcpy.mapping.ListLayers(mxd)[0]
-
-rows = arcpy.SearchCursor(routesShape)
-for row in rows:
-    stationNa = row.getValue()
-
-
-arcpy.SelectLayerByAttribute_management(stationLyr, "NEW_SELECTION")
-df.extent = stationLyr.getSelectedExtent()
-df.scale *= 1.2
-arcpy.RefreshActiveView()
-arcpy.SelectLayerByAttribute_management(stationLyr,"CLEAR_SELECTION")
-arcpy.mapping.ExportToPDF(mxd,PDFName, "PAGE_LAYOUT")
-
-
-
-
+del row, lyrlist, tmpPDF, df, lyr
+del mxd, finalPDF, finalPDF_fname
+print "Map book is finished"
