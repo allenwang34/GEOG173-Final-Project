@@ -88,7 +88,7 @@ else:
     quit()
    
 
-inIncidents  = folder_path + r'\Results\Single_Point.shp'
+inIncidents  = folder_path + r'\Results\User Location.shp'
 inFacilities = folder_path + r'\Results\Charging_Stations_Copy.shp'
 
 closest_layer = arcpy.MakeClosestFacilityLayer_na(in_network_dataset=folder_path + r'\Geog170_Street_Dataset\streets',
