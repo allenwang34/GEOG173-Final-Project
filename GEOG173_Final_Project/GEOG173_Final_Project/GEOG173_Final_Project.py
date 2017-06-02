@@ -14,7 +14,7 @@ arcpy.env.workspace = folder_path
 arcpy.env.overwriteOutput = True
 
 ###choose a shapefile to workwith 
-charging_stations = arcpy.GetParameterAsText(1) #this can be a feature class
+charging_stations = folder_path + r'\Charging_Stations.shp' #this can be a feature class
 #charging_stations_copy = arcpy.GetParameterAsText(2) #this is a duplicated point layer, we will create user location on this layer
 #results = arcpy.GetParameterAsText(3) #This shape file only includes the result stations and their distances&travel time to the user.
 #we will create map book from this result layer. 
@@ -32,7 +32,7 @@ arcpy.CopyFeatures_management(charging_stations, result_stations)
 # ASK FOR X,Y I WILL PUT IN A PLACEHOLDER, just uncomment and delete placeholder
 
 #xy = "34.073990,-118.439298"
-userCoord = arcpy.GetParameterAsText(2) #get the user location 
+userCoord = arcpy.GetParameterAsText(1) #get the user location 
 
 ##split the string
 #split_text = xy.split(",")
@@ -71,22 +71,9 @@ with arcpy.da.UpdateCursor(charging_stations_copy,"Latitude") as cursor:
             cursor.deleteRow()
 del cursor, row
 
-#removes unlocated points from charging stations copy
-#with arcpy.da.UpdateCursor(charging_stations_copy,"FID") as cursor:
-    #for row in cursor:
-        #if row[0] == 6752:
-            #cursor.deleteRow()
-        #elif row[0] == 18104:
-            #cursor.deleteRow()
-        #elif row[0] == 23001:
-            #cursor.deleteRow()
-        #elif row[0] == 23002:
-            #cursor.deleteRow()
-        #elif row[0] == 23003:
-            #cursor.deleteRow()
-#del cursor, row
 
-fuelType = arcpy.GetParameterAsText(3)
+
+fuelType = arcpy.GetParameterAsText(2)
 originalStationFIDList = []
 
 with arcpy.da.UpdateCursor(charging_stations_copy,["Fuel_Type","FID"]) as cursor:
@@ -212,9 +199,9 @@ PDFName = folder_path + r'/Nearest Alternative Fuel Charging Stations.pdf'
 myPDF = arcpy.mapping.PDFDocumentCreate(PDFName)
 stationLyr = arcpy.mapping.ListLayers(mxd)[0]
 
-rows = arcpy.SearchCursor(routesShape)
-for row in rows:
-    stationNa = row.getValue()
+#rows = arcpy.SearchCursor(routesShape)
+#for row in rows:
+    #stationNa = row.getValue()
 
 
 arcpy.SelectLayerByAttribute_management(stationLyr, "NEW_SELECTION")
