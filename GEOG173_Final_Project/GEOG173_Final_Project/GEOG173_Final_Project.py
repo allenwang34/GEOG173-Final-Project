@@ -13,48 +13,39 @@ folder_path = arcpy.GetParameterAsText(0)
 arcpy.env.workspace = folder_path
 arcpy.env.overwriteOutput = True
 
-###choose a shapefile to workwith 
-charging_stations = folder_path + r'\Charging_Stations.shp' #this can be a feature class
-#charging_stations_copy = arcpy.GetParameterAsText(2) #this is a duplicated point layer, we will create user location on this layer
-#results = arcpy.GetParameterAsText(3) #This shape file only includes the result stations and their distances&travel time to the user.
-#we will create map book from this result layer. 
+#choose a shapefile to workwith 
+charging_stations = folder_path + r'\Charging_Stations.shp' 
 
-#folder_path = r'D:\Final Project Data'
-
-#charging_stations = folder_path + r'\Charging_Stations.shp'
+#setup new file names and locations
 charging_stations_copy = folder_path + r'\Results\Charging_Stations_Copy.shp'
-single_point = folder_path + r'\Results\Single_Point.shp'
-result_stations = folder_path + r'\Results\Reulst_Stations.shp'
+single_point = folder_path + r'\Results\User Location.shp'
+result_stations = folder_path + r'\Results\Nearest Stations.shp'
 
+#copy the original file to two duplicated files 
 arcpy.CopyFeatures_management(charging_stations, charging_stations_copy)
 arcpy.CopyFeatures_management(charging_stations, result_stations)
 
-# ASK FOR X,Y I WILL PUT IN A PLACEHOLDER, just uncomment and delete placeholder
 
-#xy = "34.073990,-118.439298"
+#ask for user defined location
+#sample location: x = -118.439298  y = 34.073990
 userCoord = arcpy.GetParameterAsText(1) #get the user location 
 
-##split the string
-#split_text = xy.split(",")
-
+#after user type in the xy location, extract x and y value 
 Coords = userCoord.split(" ")
-##the second index is north (x)
-#x = split_text[1]
-xCoord = float(Coords[0])
-##the first index is west (y)
-#y = split_text[0]
+xCoord = float(Coords[0]) #make xy to float type
 yCoord = float(Coords[1])
-#make xy a float
+
+#make a tuple
 xy = (xCoord,yCoord)
 
+#create a point geometry in one of the duplicated file 
 pointCursor = arcpy.da.InsertCursor(charging_stations_copy,["SHAPE@XY"])
 pointCursor.insertRow([xy])
-
 del pointCursor
 
 
 
-#create single point shapefile
+#create a single point shapefile
 arcpy.CopyFeatures_management(charging_stations_copy, single_point)
 
 #remove extra rows from single_point shapefile
@@ -72,10 +63,11 @@ with arcpy.da.UpdateCursor(charging_stations_copy,"Latitude") as cursor:
 del cursor, row
 
 
-
+#Let the user choose fuel type
 fuelType = arcpy.GetParameterAsText(2)
-originalStationFIDList = []
+originalStationFIDList = [] #we store the station fid values for that user defined type in a list
 
+#we work on the original duplicated shapefile, only leave the user defined fuel type
 with arcpy.da.UpdateCursor(charging_stations_copy,["Fuel_Type","FID"]) as cursor:
     for row in cursor:
         if row[0] != fuelType:#"BD","CNG","E85","HY","LNG","LPG"
@@ -88,9 +80,8 @@ del cursor, row
 
 
 
-print "STARTING THE NETWORK ANALYST"
 
-
+#we condcut facility network analysis here
 if arcpy.CheckExtension("NETWORK") == "Available":
     arcpy.CheckOutExtension("NETWORK")
 else:
@@ -117,16 +108,13 @@ arcpy.na.AddLocations(out_CL,incidentsLayerName,inIncidents,"","")
 
 out_layer = folder_path + r'\Results\OUTPUT_LAYER.lyr'
 
-print "SOLVING"
+
 
 arcpy.na.Solve(out_CL,"SKIP")
 
-print "FINISHED SOLVING"
-
-print "SAVING"
 out_CL.saveACopy(out_layer)
 
-print "NEW SECTION"
+
 routesLayer = out_layer + r'\Closest Facility\Routes'
 routesShape = folder_path + r'\Results\Routes.shp'
 
@@ -137,9 +125,10 @@ for layer in layers:
     if layer.name == "Routes":
         arcpy.CopyFeatures_management(layer, routesShape)
 
-print "FINISHED THE NETWORK ANALYST"
+
 
 arcpy.CheckInExtension("NETWORK")
+
 #Create a shapefile of selected stations from route shapefile
 
 stationIndexList = [] 
