@@ -199,7 +199,7 @@ title.text = "Nearest Alternative Fuel Stations"
 
 rows = arcpy.SearchCursor(result_stations)
 textCounter = 2
-stationCounter=1
+stationCounter=0
 for row in rows:
     stationNa = row.getValue("Station_Na")
     texts = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT")[textCounter]
@@ -227,15 +227,15 @@ texts = arcpy.mapping.ListLayoutElements(mxd, "TEXT_ELEMENT")
 #for each station zoom in and get all the needed information
 for station in stations:
     fid = station.getValue("FID")
+    fid+=1
     stationName = station.getValue("Station_Na")
     stationAdd = station.getValue("Street_Add")
     stationHr = station.getValue("Access_Day")
     stationPay = station.getValue("Groups_Wit")
-    stationInfoList = ["Station {0}: {1}".format(fid+1, stationName),
+    stationInfoList = ["Station {0}: {1}".format(fid, stationName),
                     "Station Address: {}".format(stationAdd),
                     "Station Hours: {}".format(stationHr),
                     "Payment Method: {}".format(stationPay)]
-
 
 #print out the station info into text elements 
     counter = 3
@@ -265,7 +265,7 @@ except OSError:
     pass
 
 #delete all temporary objects
-del mxd, stations, station, texts, text
+del mapDoc, stations, station, texts, text
 
 
 
