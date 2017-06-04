@@ -82,10 +82,9 @@ del cursor, row
 
 
 #we condcut facility network analysis here
-if arcpy.CheckExtension("NETWORK") == "Available":
-    arcpy.CheckOutExtension("NETWORK")
-else:
-    quit()
+
+arcpy.CheckOutExtension('Network')
+
    
 
 inIncidents  = folder_path + r'\Results\User Location.shp'
@@ -127,7 +126,7 @@ for layer in layers:
 
 
 
-arcpy.CheckInExtension("NETWORK")
+arcpy.CheckInExtension('Network')
 
 #Create a shapefile of selected stations from route shapefile
 
@@ -173,6 +172,9 @@ del cursor, row
 mxdFileLocation = r'E:\Final Project\FinalProject.mxd'
 mxd = arcpy.mapping.MapDocument("CURRENT")
 df = arcpy.mapping.ListDataFrames(mxd,"*")[0]
+
+
+
 
 pointList = [routesShape,single_point,result_stations]
 
@@ -264,8 +266,26 @@ try:
 except OSError:
     pass
 
+
+
+
+#arcpy.CheckOutExtension('Spatial')
+OutputKernel = folder_path + r'\FuelTypeKernel.tif'
+arcpy.gp.KernelDensity_sa(charging_stations_copy, "NONE", 
+                          OutputKernel,
+                          "0.1857694464", "", "SQUARE_MAP_UNITS",
+                          "DENSITIES", "PLANAR")
+addlayer = arcpy.mapping.Layer(OutputKernel)
+arcpy.mapping.AddLayer(df, addlayer)
+arcpy.ApplySymbologyFromLayer_management("FuelTypeKernel.tif", "Kernel.tif")
+
+
+
 #delete all temporary objects
 del mxd, stations, station, texts, text
+
+
+
 
 
 
