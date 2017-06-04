@@ -270,15 +270,14 @@ except OSError:
 
 
 #arcpy.CheckOutExtension('Spatial')
-OutputKernel = folder_path + r'\FuelTypeKernel.tif'
-arcpy.gp.KernelDensity_sa(charging_stations_copy, "NONE", 
-                          OutputKernel,
-                          "0.1857694464", "", "SQUARE_MAP_UNITS",
-                          "DENSITIES", "PLANAR")
-addlayer = arcpy.mapping.Layer(OutputKernel)
-arcpy.mapping.AddLayer(df, addlayer)
-arcpy.ApplySymbologyFromLayer_management("FuelTypeKernel.tif", "Kernel.tif")
-
+#OutputKernel = folder_path + r'\FuelTypeKernel.tif'
+#arcpy.gp.KernelDensity_sa(charging_stations_copy, "NONE", 
+#                          OutputKernel,
+#                          "0.1857694464", "", "SQUARE_MAP_UNITS",
+#                          "DENSITIES", "PLANAR")
+#addlayer = arcpy.mapping.Layer(OutputKernel)
+#arcpy.mapping.AddLayer(df, addlayer)
+#arcpy.ApplySymbologyFromLayer_management("FuelTypeKernel.tif", "Kernel.tif")
 
 
 #delete all temporary objects
